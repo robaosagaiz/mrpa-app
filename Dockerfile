@@ -23,7 +23,6 @@ FROM base AS runner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=3334
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -36,13 +35,21 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# Create data dir for SQLite
+# Create data dir for SQLite and a startup script
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
+# Create init script that creates DB tables if needed
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'cd /app' >> /app/start.sh && \
+    echo 'node node_modules/prisma/build/index.js db push --schema=./prisma/schema.prisma --skip-generate 2>&1 || true' >> /app/start.sh && \
+    echo 'node server.js' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 USER nextjs
-EXPOSE 3334
+EXPOSE 3000
 
 ENV DATABASE_URL="file:/app/data/mrpa.db"
 ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
 
-CMD ["sh", "-c", "npx prisma db push --schema=./prisma/schema.prisma --skip-generate 2>&1 || true; node server.js"]
+CMD ["/app/start.sh"]
