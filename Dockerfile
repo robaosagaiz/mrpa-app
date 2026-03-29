@@ -20,6 +20,7 @@ RUN npm run build
 
 # Production
 FROM base AS runner
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3334
@@ -33,6 +34,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Create data dir for SQLite
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
@@ -41,5 +43,6 @@ USER nextjs
 EXPOSE 3334
 
 ENV DATABASE_URL="file:/app/data/mrpa.db"
+ENV HOSTNAME="0.0.0.0"
 
-CMD ["sh", "-c", "npx prisma db push --skip-generate 2>/dev/null; node server.js"]
+CMD ["sh", "-c", "npx prisma db push --schema=./prisma/schema.prisma --skip-generate 2>&1 || true; node server.js"]
