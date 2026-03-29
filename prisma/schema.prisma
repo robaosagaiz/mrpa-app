@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id        Int        @id @default(autoincrement())
+  name      String
+  token     String     @unique
+  createdAt DateTime   @default(now())
+  protocols Protocol[]
+}
+
+model Protocol {
+  id           Int           @id @default(autoincrement())
+  patientId    Int
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  type         String
+  startDate    DateTime      @default(now())
+  status       String        @default("active")
+  createdAt    DateTime      @default(now())
+  measurements Measurement[]
+}
+
+model Measurement {
+  id           Int      @id @default(autoincrement())
+  protocolId   Int
+  protocol     Protocol @relation(fields: [protocolId], references: [id])
+  datetime     DateTime
+  period       String
+  pas          Int
+  pad          Int
+  pulse        Int
+  isDiscrepant Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
